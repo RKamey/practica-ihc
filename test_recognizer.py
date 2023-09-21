@@ -1,8 +1,20 @@
+# Importamos pygame (para dibujar la ventana) el modelo KaldiRecognizer para
+# el reconocimiento de voz y pyaudio para la configuración del micrófono
 import pygame as pg
-import speech_recognition as sr
+from vosk import Model, KaldiRecognizer
+import pyaudio
 
+# Definimos el modelo para el reconocimiento de voz en español
+model = Model(r"C:\Users\alons\Downloads\vosk-model-small-es-0.42\vosk-model-small-es-0.42")
+recognizer = KaldiRecognizer(model, 16000)
+
+# Configuramos el audio del micrófono
+mic = pyaudio.PyAudio()
+stream = mic.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
+stream.start_stream()
+
+# Configuración de pygame
 pg.init()
-
 ancho = 800
 alto = 600
 ventana = pg.display.set_mode((ancho, alto))
@@ -40,23 +52,22 @@ while True:
         if evento.type == pg.QUIT:
             pg.quit()
             quit()
-
-    # Detectar el comando de voz
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-    
-    with mic as source:
-        print("Di un comando: arriba, abajo, izquierda o derecha")
-        audio = recognizer.listen(source)
     
     try:
-        command = recognizer.recognize_google(audio, language="es-ES")
-        print(f'Comando reconocido: {command}')
-        mover_circulo(command)
-    except sr.UnknownValueError:
-        print("No se entendió el comando.")
-    except sr.RequestError as e:
-        print(f"Error en la solicitud: {e}")
+        data = stream.read(4096)
+        if recognizer.AcceptWaveform(data):
+            command = (recognizer.Result()[14:-3]).lower()
+
+            if command == "arriba":
+                mover_circulo("arriba")
+            elif command == "abajo":
+                mover_circulo("abajo")
+            elif command == "izquierda":
+                mover_circulo("izquierda")
+            elif command == "derecha":
+                mover_circulo("derecha")
+    except Exception as e:
+        print(f"Error: {str(e)}")
 
     # Limpiar la pantalla
     ventana.fill((255, 255, 255))
@@ -71,3 +82,6 @@ while True:
 
     # Actualizar la pantalla
     pg.display.flip()
+
+    # Esperar 0.1 segundos
+    pg.time.delay(100)
