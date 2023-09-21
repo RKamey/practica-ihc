@@ -1,0 +1,1 @@
+# intento por hacer reconocimiento con librerias locales
