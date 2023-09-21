@@ -15,38 +15,44 @@ stream.start_stream()
 
 # Configuración de pygame
 pg.init()
-ancho = 800
-alto = 600
-ventana = pg.display.set_mode((ancho, alto))
-pg.display.set_caption("Mi Ventana Pygame")
+width, height = 600, 600
+screen = pg.display.set_mode((width, height))
+pg.display.set_caption("Juego con reconocimiento de voz")
+pg.display.set_icon(pg.image.load("./images/voice.png"))
 
-# Tamaño de cada casilla del tablero
-tam_casilla = 60
+# Colores
+white = (255, 255, 255)
+red = (255, 0, 0)
 
-def mover_circulo(direccion):
-    global pos_x, pos_y
+# Tamaño de la cuadrícula
+grid_size = 3
+cell_size = width // grid_size
 
-    if direccion == "arriba":
-        pos_y -= tam_casilla
-    elif direccion == "abajo":
-        pos_y += tam_casilla
-    elif direccion == "izquierda":
-        pos_x -= tam_casilla
-    elif direccion == "derecha":
-        pos_x += tam_casilla
+# Calcula la posición inicial del avatar en el centro
+avatar_x = grid_size // 2
+avatar_y = grid_size // 2
 
-# Tamaño y grosor del círculo
-radio = 30
-grosor = 0  # 0 significa un círculo lleno
+# Personaliza el avatar
+avatar_image = pg.image.load("./images/snake.png")
 
-# Calcular el centro de la ventana
-centro_x = ancho // 2
-centro_y = alto // 2
+# Define el nuevo tamaño del avatar
+avatar_width = 200  # Ancho deseado
+avatar_height = 200  # Alto deseado
 
-# Inicializar posición del círculo en el centro del tablero
-pos_x = centro_x
-pos_y = centro_y
+# Función para mover el avatar
+def move_avatar(direction):
+    global avatar_x, avatar_y
 
+    if direction == "derecha" and avatar_x < grid_size - 1:
+        avatar_x += 1
+    elif direction == "izquierda" and avatar_x > 0:
+        avatar_x -= 1
+    elif direction == "abajo" and avatar_y < grid_size - 1:
+        avatar_y += 1
+    elif direction == "arriba" and avatar_y > 0:
+        avatar_y -= 1
+
+# Bucle principal del juego
 while True:
     for evento in pg.event.get():
         if evento.type == pg.QUIT:
@@ -54,31 +60,38 @@ while True:
             quit()
     
     try:
+        # Leer el audio del micrófono
         data = stream.read(4096)
         if recognizer.AcceptWaveform(data):
             command = (recognizer.Result()[14:-3]).lower()
 
+            # Mover el avatar según el comando que escuchó el modelo
             if command == "arriba":
-                mover_circulo("arriba")
+                move_avatar("arriba")
             elif command == "abajo":
-                mover_circulo("abajo")
+                move_avatar("abajo")
             elif command == "izquierda":
-                mover_circulo("izquierda")
+                move_avatar("izquierda")
             elif command == "derecha":
-                mover_circulo("derecha")
+                move_avatar("derecha")
+    
+    # Manejar errores
     except Exception as e:
         print(f"Error: {str(e)}")
 
     # Limpiar la pantalla
-    ventana.fill((255, 255, 255))
+    screen.fill((255, 255, 255))
 
-    # Dibuja el tablero de 9 casillas centrado
-    for i in range(3):
-        for j in range(3):
-            pg.draw.rect(ventana, (0, 0, 0), (centro_x + (i - 1) * tam_casilla, centro_y + (j - 1) * tam_casilla, tam_casilla, tam_casilla), 2)
+  # Dibuja la cuadrícula
+    screen.fill(white)
+    for x in range(grid_size):
+        for y in range(grid_size):
+            pg.draw.rect(screen, red, (x * cell_size, y * cell_size, cell_size, cell_size), 1)
 
-    # Dibujar el círculo en la nueva posición
-    pg.draw.circle(ventana, (0, 0, 255), (pos_x, pos_y), radio, grosor)
+    # Redimensiona y dibuja el avatar en la posición actual
+    avatar_resized = pg.transform.scale(avatar_image, (avatar_width, avatar_height))
+    avatar_position = (avatar_x * cell_size, avatar_y * cell_size)
+    screen.blit(avatar_resized, avatar_position)
 
     # Actualizar la pantalla
     pg.display.flip()
