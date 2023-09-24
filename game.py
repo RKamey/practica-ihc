@@ -1,6 +1,7 @@
 import pygame as pg # Importamos pygame y lo llamamos pg
-import speech_recognition as sr # Importamos speech_recognition y lo llamamos sr
+import pyaudio
 from random import randrange # Importamos la función randrange del módulo random
+from vosk import Model, KaldiRecognizer
 
 WINDOW = 800 # Definimos la ventana
 TILE_SIZE = 50 # Definimos el tamaño de la celda
@@ -20,24 +21,52 @@ screen = pg.display.set_caption('Practica 1: Snake con Reconocimiento de Voz') #
 screen = pg.display.set_mode([WINDOW] * 2) # Definimos la pantalla
 clock = pg.time.Clock() # Definimos el reloj
 
-# Definimos un diccionario para mapear las teclas con las direcciones
-key_map = { 
-    pg.K_w: (0, -TILE_SIZE), 
-    pg.K_s: (0, TILE_SIZE), 
-    pg.K_a: (-TILE_SIZE, 0), 
-    pg.K_d: (TILE_SIZE, 0) 
-} 
+# Definimos el modelo para el reconocimiento de voz en español
+model = Model(r"C:\Users\alons\Downloads\vosk-model-small-es-0.42\vosk-model-small-es-0.42")
+recognizer = KaldiRecognizer(model, 16000)
 
-recognizer = sr.Recognizer() # Definimos el reconocedor
+# Configuramos el audio del micrófono
+mic = pyaudio.PyAudio()
+stream = mic.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
+stream.start_stream()
+
+def move_snake(direction):
+    global snake_dir
+
+    if direction == "arriba":
+        snake_dir = (0, -TILE_SIZE)
+    elif direction == "abajo":
+        snake_dir = (0, TILE_SIZE)
+    elif direction == "izquierda":
+        snake_dir = (-TILE_SIZE, 0)
+    elif direction == "derecha":
+        snake_dir = (TILE_SIZE, 0)
 
 while True: # Bucle principal
     for event in pg.event.get(): # Bucle de eventos
         if event.type == pg.QUIT: # Si el evento es cerrar la ventana
             exit() # Salimos del programa
-        if event.type == pg.KEYDOWN and event.key in key_map:
-            new_direction = key_map[event.key]
-            if (new_direction != (-snake_dir[0], -snake_dir[1])):
-                snake_dir = new_direction
+        try:
+            data = stream.read(4096)
+            if recognizer.AcceptWaveform(data):
+                command = recognizer.Result().lower().strip()
+
+                if "arriba" in command:
+                    print("Comando: ", command)
+                    move_snake("arriba")
+                elif "abajo" in command:
+                    print("Comando: ", command)
+                    move_snake("abajo")
+                elif "izquierda" in command:
+                    print("Comando: ", command)
+                    move_snake("izquierda")
+                elif "derecha" in command:
+                    print("Comando: ", command)
+                    move_snake("derecha")
+
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
     
     screen.fill('black') # El fondo es negro
 
